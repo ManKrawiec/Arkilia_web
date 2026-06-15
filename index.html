@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arkilia Linux</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #04091a;
+      --bg2:       #070f24;
+      --blue-dim:  #1e3a6e;
+      --blue-mid:  #2563eb;
+      --blue-hi:   #60a5fa;
+      --blue-glow: #3b82f6;
+      --text:      #e2e8f0;
+      --muted:     #94a3b8;
+      --border:    rgba(96, 165, 250, 0.18);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── CONSTELLATION CANVAS ── */
+    #constellation {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── TRAIL CANVAS ── */
+    #trail-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      pointer-events: none;
+    }
+
+    /* ── LAYOUT HELPERS ── */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      background: rgba(5, 10, 28, 0.68);
+      backdrop-filter: blur(36px) saturate(1.8) brightness(1.08);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        0 4px 24px rgba(0, 0, 40, 0.45);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      text-decoration: none;
+      color: var(--text);
+      font-size: 1.15rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+
+    .nav-logo svg { flex-shrink: 0; }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--blue-hi); }
+
+    /* ── HERO ── */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 6rem 1.5rem 4rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      background: rgba(37, 99, 235, 0.15);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 0.3rem 1rem;
+      font-size: 0.78rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--blue-hi);
+      margin-bottom: 1.6rem;
+    }
+
+    #hero h1 {
+      font-size: clamp(2.6rem, 7vw, 5rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin-bottom: 1.2rem;
+      background: linear-gradient(135deg, #fff 30%, var(--blue-hi));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    #hero p {
+      max-width: 520px;
+      color: var(--muted);
+      font-size: 1.1rem;
+      line-height: 1.7;
+      margin-bottom: 2.4rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 0.75rem 1.8rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: var(--blue-mid);
+      color: #fff;
+      border: 1px solid transparent;
+      box-shadow: 0 0 24px rgba(37, 99, 235, 0.35);
+    }
+
+    .btn-primary:hover {
+      background: #1d4ed8;
+      box-shadow: 0 0 36px rgba(37, 99, 235, 0.55);
+      transform: translateY(-1px);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--blue-hi);
+      border: 1px solid var(--border);
+    }
+
+    .btn-outline:hover {
+      background: rgba(96, 165, 250, 0.08);
+      border-color: var(--blue-hi);
+      transform: translateY(-1px);
+    }
+
+    /* ── SECTION SHARED ── */
+    section {
+      position: relative;
+      z-index: 1;
+      padding: 6rem 0;
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--blue-hi);
+      margin-bottom: 0.75rem;
+      font-weight: 600;
+    }
+
+    .section-title {
+      font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 1rem;
+    }
+
+    .section-sub {
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.7;
+      max-width: 520px;
+      margin-bottom: 3rem;
+    }
+
+    /* ── FEATURES ── */
+    #features {
+      background: rgba(5, 11, 32, 0.35);
+      backdrop-filter: blur(48px) saturate(1.6) brightness(1.04);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.07),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.03);
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .feature-card {
+      background: rgba(10, 20, 55, 0.55);
+      backdrop-filter: blur(32px) saturate(1.7) brightness(1.06);
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      border-radius: 12px;
+      padding: 1.75rem;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.16),
+        inset 1px 0 0 rgba(255, 255, 255, 0.06),
+        0 8px 32px rgba(0, 0, 40, 0.5);
+    }
+
+    .feature-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(135deg, rgba(180, 210, 255, 0.07) 0%, transparent 45%),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 0%, transparent 35%);
+      border-radius: inherit;
+      pointer-events: none;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(96, 165, 250, 0.35);
+      transform: translateY(-3px);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.22),
+        inset 1px 0 0 rgba(255, 255, 255, 0.08),
+        0 16px 48px rgba(0, 0, 60, 0.55),
+        0 0 0 1px rgba(96, 165, 250, 0.12);
+    }
+
+    .feature-icon {
+      width: 44px;
+      height: 44px;
+      background: rgba(37, 99, 235, 0.18);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      color: var(--blue-hi);
+    }
+
+    .feature-card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .feature-card p {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* ── DOWNLOAD ── */
+    #download { background: var(--bg); }
+
+    .download-box {
+      background: rgba(10, 20, 55, 0.55);
+      backdrop-filter: blur(36px) saturate(1.7) brightness(1.06);
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      border-radius: 16px;
+      position: relative;
+      overflow: hidden;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        inset 1px 0 0 rgba(255, 255, 255, 0.07),
+        0 12px 40px rgba(0, 0, 40, 0.55);
+      padding: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .download-box::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(135deg, rgba(180, 210, 255, 0.07) 0%, transparent 50%),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 0%, transparent 30%);
+      border-radius: inherit;
+      pointer-events: none;
+    }
+
+    .download-meta { display: flex; flex-direction: column; gap: 0.4rem; }
+
+    .download-version {
+      font-size: 0.8rem;
+      color: var(--blue-hi);
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .download-name {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .download-detail {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .download-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+    /* ── ABOUT ── */
+    #about {
+      background: rgba(5, 11, 32, 0.78);
+      backdrop-filter: blur(48px) saturate(1.6) brightness(1.04);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.07),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.03);
+    }
+
+    .about-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+    }
+
+    @media (max-width: 700px) {
+      .about-inner { grid-template-columns: 1fr; gap: 2rem; }
+    }
+
+    .about-text p {
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.8;
+      margin-bottom: 1.2rem;
+    }
+
+    .about-text p:last-child { margin-bottom: 0; }
+
+    .about-links { display: flex; flex-direction: column; gap: 0.75rem; }
+
+    .about-link {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.2rem;
+      background: rgba(10, 20, 55, 0.52);
+      backdrop-filter: blur(28px) saturate(1.6) brightness(1.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      text-decoration: none;
+      color: var(--text);
+      font-size: 0.9rem;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.14),
+        0 4px 16px rgba(0, 0, 30, 0.4);
+    }
+
+    .about-link::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(120deg, rgba(180, 210, 255, 0.06) 0%, transparent 50%);
+      border-radius: inherit;
+      pointer-events: none;
+    }
+
+    .about-link:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.22),
+        0 6px 24px rgba(0, 0, 50, 0.5),
+        0 0 0 1px rgba(96, 165, 250, 0.1);
+    }
+
+    .about-link span { color: var(--muted); font-size: 0.75rem; }
+
+    /* ── FOOTER ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      background: rgba(4, 8, 24, 0.75);
+      backdrop-filter: blur(40px) saturate(1.7) brightness(1.05);
+      border-top: 1px solid rgba(255, 255, 255, 0.09);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      padding: 2.5rem 0;
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 1.5rem;
+      list-style: none;
+    }
+
+    .footer-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--blue-hi); }
+
+    /* ── DIVIDER ── */
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── RESPONSIVE NAV ── */
+    @media (max-width: 600px) {
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="constellation"></canvas>
+<canvas id="trail-canvas"></canvas>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">
+      <!-- Star icon -->
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--blue-hi)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+      </svg>
+      Arkilia Linux
+    </a>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#download">Download</a></li>
+      <li><a href="#about">About</a></li>
+      <li><a href="#">Docs</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-badge">Arch-based &middot; Rolling release</div>
+  <h1>Arkilia<br>Linux</h1>
+  <p>Arkilia is a minimal Arch-based distribution built as a small hobby project.</p>
+  <div class="hero-actions">
+    <a href="https://github.com/ManKrawiec/Arkilia-Linux" class="btn btn-primary" target="_blank" rel="noopener noreferrer">GitHub</a>
+    <a href="#" class="btn btn-outline">Read the docs</a>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="container">
+    <div class="section-label">Why Arkilia</div>
+    <h2 class="section-title">Built lean, stays clean.</h2>
+    <p class="section-sub">No bloat. Just a solid base you control from day one.</p>
+
+    <div class="features-grid">
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <!-- Package icon -->
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/>
+            <line x1="10" y1="12" x2="14" y2="12"/>
+          </svg>
+        </div>
+        <h3>Preinstalled Software</h3>
+        <p>So preinstalled software isn't specified yet. Will be announced in the future</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <!-- Refresh/rolling icon -->
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/>
+            <polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+        </div>
+        <h3>Rolling Release</h3>
+        <p>Always current. Arch's proven rolling model keeps your system up to date without reinstalls.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <!-- Terminal icon -->
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 17 10 11 4 5"/>
+            <line x1="12" y1="19" x2="20" y2="19"/>
+          </svg>
+        </div>
+        <h3>Full AUR Access</h3>
+        <p>The entire Arch User Repository at your fingertips. Thousands of packages, one command away.</p>
+      </div>
+
+
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="container">
+    <div class="about-inner">
+      <div class="about-text">
+        <div class="section-label">About</div>
+        <h2 class="section-title">Simple by design.</h2>
+        <p>Arkilia Linux is a small test project made by Me and Mankrawiec. It's not supposed to be a big distribtuion but if it succeeds we might keep on maintaining it</p>
+        <p>This project is not really meant for real hardware but you can still use it. By the way this website has not been made with human input. Fully made by claude code. Though i've edited some text fields</p>
+      </div>
+
+      <div class="about-links">
+        <a href="https://github.com/ManKrawiec/Arkilia_web" class="about-link" target="_blank" rel="noopener noreferrer">
+          Website Source
+          <span>GitHub &rarr;</span>
+        </a>
+        <a href="https://github.com/ManKrawiec/Arkilia-Linux/issues" class="about-link" target="_blank" rel="noopener noreferrer">
+          Issue tracker
+          <span>GitHub Issues &rarr;</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-left">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--blue-dim)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+      </svg>
+      Arkilia Linux &mdash; open source, always.
+    </div>
+  </div>
+</footer>
+
+<!-- CONSTELLATION SCRIPT -->
+<script>
+  const canvas  = document.getElementById('constellation');
+  const ctx     = canvas.getContext('2d');
+
+  const trailCanvas = document.getElementById('trail-canvas');
+  const tCtx        = trailCanvas.getContext('2d');
+
+  const PARTICLE_COUNT = 280;
+  const MAX_SPEED      = 0.12;
+
+  let W, H;
+  const mouse = { x: null, y: null };
+  let particles = [];
+
+  const trail = [];
+  const TRAIL_MAX_AGE = 500;
+  const TRAIL_MAX_PTS = 80;
+
+  function resize() {
+    W = canvas.width  = trailCanvas.width  = window.innerWidth;
+    H = canvas.height = trailCanvas.height = window.innerHeight;
+  }
+
+  class Particle {
+    constructor(fromEdge = false) {
+      this.spawn(fromEdge);
+    }
+
+    spawn(fromEdge) {
+      if (fromEdge) {
+        const side = Math.floor(Math.random() * 4);
+        if (side === 0)      { this.x = Math.random() * W; this.y = -8; }
+        else if (side === 1) { this.x = W + 8; this.y = Math.random() * H; }
+        else if (side === 2) { this.x = Math.random() * W; this.y = H + 8; }
+        else                 { this.x = -8; this.y = Math.random() * H; }
+      } else {
+        this.x = Math.random() * W;
+        this.y = Math.random() * H;
+      }
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.01 + Math.random() * 0.04;
+      this.vx   = Math.cos(angle) * speed;
+      this.vy   = Math.sin(angle) * speed;
+      this.r     = 0.2 + Math.random() * 1.3;
+      this.base  = 0.3  + Math.random() * 0.6;
+      this.phase = Math.random() * Math.PI * 2;
+    }
+
+    update() {
+      // Gentle random drift
+      this.vx += (Math.random() - 0.5) * 0.0008;
+      this.vy += (Math.random() - 0.5) * 0.0008;
+
+      // Speed cap
+      const spd = Math.hypot(this.vx, this.vy);
+      if (spd > MAX_SPEED) {
+        this.vx = (this.vx / spd) * MAX_SPEED;
+        this.vy = (this.vy / spd) * MAX_SPEED;
+      }
+
+      this.x += this.vx;
+      this.y += this.vy;
+
+      if (this.x < -25 || this.x > W + 25 || this.y < -25 || this.y > H + 25) {
+        this.spawn(true);
+      }
+    }
+
+    draw(now) {
+      const twinkle = 0.65 + 0.35 * Math.sin(now * 0.0008 + this.phase);
+      const alpha   = this.base * twinkle;
+      ctx.shadowBlur  = (this.r * 4 + 3) * twinkle;
+      ctx.shadowColor = 'rgba(147, 197, 253, 0.9)';
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(210, 230, 255, ${alpha})`;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  function init() {
+    resize();
+    particles = Array.from({ length: PARTICLE_COUNT }, () => new Particle(false));
+  }
+
+  function drawTrail() {
+    const now = performance.now();
+    while (trail.length && now - trail[0].t > TRAIL_MAX_AGE) trail.shift();
+
+    tCtx.clearRect(0, 0, W, H);
+    if (trail.length < 2) return;
+
+    const n = trail.length;
+    tCtx.lineCap  = 'round';
+    tCtx.lineJoin = 'round';
+
+    // Pass 1 — outer glow
+    tCtx.shadowBlur  = 14;
+    tCtx.shadowColor = 'rgba(80, 140, 255, 1)';
+    for (let i = 1; i < n; i++) {
+      const t    = i / (n - 1);
+      const life = 1 - (now - trail[i].t) / TRAIL_MAX_AGE;
+      tCtx.beginPath();
+      tCtx.moveTo(trail[i - 1].x, trail[i - 1].y);
+      tCtx.lineTo(trail[i].x,     trail[i].y);
+      tCtx.lineWidth   = (1.5 + t * 5) * life;
+      tCtx.strokeStyle = `rgba(60, 120, 255, ${t * life * 0.55})`;
+      tCtx.stroke();
+    }
+    tCtx.shadowBlur = 0;
+
+    // Pass 2 — bright white core
+    for (let i = 1; i < n; i++) {
+      const t    = i / (n - 1);
+      const life = 1 - (now - trail[i].t) / TRAIL_MAX_AGE;
+      tCtx.beginPath();
+      tCtx.moveTo(trail[i - 1].x, trail[i - 1].y);
+      tCtx.lineTo(trail[i].x,     trail[i].y);
+      tCtx.lineWidth   = (0.4 + t * 2) * life;
+      tCtx.strokeStyle = `rgba(210, 230, 255, ${t * life * 0.95})`;
+      tCtx.stroke();
+    }
+  }
+
+  function frame() {
+    const now = performance.now();
+    ctx.clearRect(0, 0, W, H);
+    drawTrail();                                   // drawn on top-layer canvas
+    particles.forEach(p => { p.update(); p.draw(now); });
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('resize', () => {
+    resize();
+    particles.forEach(p => {
+      if (p.x > W) p.x = Math.random() * W;
+      if (p.y > H) p.y = Math.random() * H;
+    });
+  });
+
+  window.addEventListener('mousemove', e => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+    trail.push({ x: e.clientX, y: e.clientY, t: performance.now() });
+    if (trail.length > TRAIL_MAX_PTS) trail.shift();
+  });
+  window.addEventListener('mouseleave', () => { mouse.x = null; mouse.y = null; });
+
+  init();
+  frame();
+</script>
+
+</body>
+</html>
