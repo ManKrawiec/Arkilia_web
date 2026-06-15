@@ -1,1 +1,1 @@
-nie wiem na test
+Small website. Made with AI if you wanna know.
